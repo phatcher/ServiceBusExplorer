@@ -2982,7 +2982,7 @@ namespace ServiceBusExplorer
                             messageList = messageEnumerable as IList<BrokeredMessage> ?? messageEnumerable.ToList();
                             if (messageInspector != null)
                             {
-                                messageList = messageList.Select(b => messageInspector.AfterReceiveMessage(b)).ToList();
+                                messageList = messageList.Select(messageInspector.AfterReceiveMessage).Where(x => x != null).ToList();
                             }
                             isCompleted = messageEnumerable == null || !messageList.Any();
                             if (isCompleted)

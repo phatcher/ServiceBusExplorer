@@ -1199,6 +1199,10 @@ namespace ServiceBusExplorer.Controls
                 if (receiverBrokeredMessageInspector != null)
                 {
                     message = receiverBrokeredMessageInspector.AfterReceiveMessage(message);
+                    if (message == null)
+                    {
+                        return;
+                    }
                 }
                 if (logging)
                 {

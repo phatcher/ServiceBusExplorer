@@ -49,6 +49,8 @@ using ServiceBusExplorer.Utilities.Helpers;
 
 namespace ServiceBusExplorer.Controls
 {
+    using Common.Helpers;
+
     public partial class HandleQueueControl : UserControl
     {
         #region Private Constants
@@ -332,12 +334,21 @@ namespace ServiceBusExplorer.Controls
                     txtMessageText.Text = string.Empty;
                     messageCustomPropertyGrid.SelectedObject = null;
                     messagePropertyGrid.SelectedObject = null;
-                    var messageInspector = !string.IsNullOrEmpty(receiveModeForm.Inspector) &&
-                                           serviceBusHelper.BrokeredMessageInspectors.ContainsKey(
-                                               receiveModeForm.Inspector)
-                        ? Activator.CreateInstance(serviceBusHelper.BrokeredMessageInspectors[receiveModeForm.Inspector])
-                            as IBrokeredMessageInspector
-                        : null;
+
+                    var messageInspector = receiveModeForm.ToBrokeredMessageInspector(serviceBusHelper);
+                    //var messageInspector = !string.IsNullOrEmpty(receiveModeForm.Inspector) &&
+                    //                       serviceBusHelper.BrokeredMessageInspectors.ContainsKey(
+                    //                           receiveModeForm.Inspector)
+                    //    ? Activator.CreateInstance(serviceBusHelper.BrokeredMessageInspectors[receiveModeForm.Inspector])
+                    //        as IBrokeredMessageInspector
+                    //    : null;
+
+                    //if (!string.IsNullOrEmpty(receiveModeForm.Filter))
+                    //{
+                    //    // Wrap the current inspector in a filter
+                    //    messageInspector = new FilteredBrokeredMessageInspector(receiveModeForm.Filter, messageInspector);
+                    //}
+
                     if (queueDescription.EnablePartitioning)
                     {
                         ReadMessagesOneAtTheTime(receiveModeForm.Peek, receiveModeForm.All, receiveModeForm.Count,
@@ -408,9 +419,18 @@ namespace ServiceBusExplorer.Controls
                 txtDeadletterText.Text = string.Empty;
                 deadletterCustomPropertyGrid.SelectedObject = null;
                 deadletterPropertyGrid.SelectedObject = null;
-                var messageInspector = !string.IsNullOrEmpty(receiveModeForm.Inspector) && serviceBusHelper.BrokeredMessageInspectors.ContainsKey(receiveModeForm.Inspector)
-                    ? Activator.CreateInstance(serviceBusHelper.BrokeredMessageInspectors[receiveModeForm.Inspector]) as IBrokeredMessageInspector
-                    : null;
+
+                var messageInspector = receiveModeForm.ToBrokeredMessageInspector(serviceBusHelper);
+                //var messageInspector = !string.IsNullOrEmpty(receiveModeForm.Inspector) && serviceBusHelper.BrokeredMessageInspectors.ContainsKey(receiveModeForm.Inspector)
+                //    ? Activator.CreateInstance(serviceBusHelper.BrokeredMessageInspectors[receiveModeForm.Inspector]) as IBrokeredMessageInspector
+                //    : null;
+
+                //if (!string.IsNullOrEmpty(receiveModeForm.Filter))
+                //{
+                //    // Wrap the current inspector in a filter
+                //    messageInspector = new FilteredBrokeredMessageInspector(receiveModeForm.Filter, messageInspector);
+                //}
+
                 if (queueDescription.EnablePartitioning)
                 {
                     ReadDeadletterMessagesOneAtTheTime(receiveModeForm.Peek, receiveModeForm.All, receiveModeForm.Count, messageInspector, receiveModeForm.FromSequenceNumber);
@@ -433,9 +453,18 @@ namespace ServiceBusExplorer.Controls
                 txtTransferDeadletterText.Text = string.Empty;
                 transferDeadletterCustomPropertyGrid.SelectedObject = null;
                 transferDeadletterPropertyGrid.SelectedObject = null;
-                var messageInspector = !string.IsNullOrEmpty(receiveModeForm.Inspector) && serviceBusHelper.BrokeredMessageInspectors.ContainsKey(receiveModeForm.Inspector)
-                    ? Activator.CreateInstance(serviceBusHelper.BrokeredMessageInspectors[receiveModeForm.Inspector]) as IBrokeredMessageInspector
-                    : null;
+
+                var messageInspector = receiveModeForm.ToBrokeredMessageInspector(serviceBusHelper);
+                //var messageInspector = !string.IsNullOrEmpty(receiveModeForm.Inspector) && serviceBusHelper.BrokeredMessageInspectors.ContainsKey(receiveModeForm.Inspector)
+                //    ? Activator.CreateInstance(serviceBusHelper.BrokeredMessageInspectors[receiveModeForm.Inspector]) as IBrokeredMessageInspector
+                //    : null;
+
+                //if (!string.IsNullOrEmpty(receiveModeForm.Filter))
+                //{
+                //    // Wrap the current inspector in a filter
+                //    messageInspector = new FilteredBrokeredMessageInspector(receiveModeForm.Filter, messageInspector);
+                //}
+
                 if (queueDescription.EnablePartitioning)
                 {
                     ReadTransferDeadletterMessagesOneAtTheTime(receiveModeForm.Peek, receiveModeForm.All, receiveModeForm.Count, messageInspector, receiveModeForm.FromSequenceNumber);
@@ -1349,7 +1378,7 @@ namespace ServiceBusExplorer.Controls
                         }
                         var messageArray = messageEnumerable as BrokeredMessage[] ?? messageEnumerable.ToArray();
                         var partialList = messageInspector != null
-                            ? messageArray.Select(b => messageInspector.AfterReceiveMessage(b)).ToList()
+                            ? messageArray.Select(messageInspector.AfterReceiveMessage).Where(x => x != null).ToList()
                             : new List<BrokeredMessage>(messageArray);
                         brokeredMessages.AddRange(partialList);
                         totalRetrieved += partialList.Count;
@@ -1380,7 +1409,7 @@ namespace ServiceBusExplorer.Controls
                         }
                         totalRetrieved += retrieved;
                         brokeredMessages.AddRange(messageInspector != null
-                            ? enumerable.Select(b => messageInspector.AfterReceiveMessage(b))
+                            ? enumerable.Select(messageInspector.AfterReceiveMessage).Where(x => x != null)
                             : enumerable);
                     } while (retrieved > 0 && (all || count > totalRetrieved));
                     writeToLog(string.Format(MessagesReceivedFromTheQueue, brokeredMessages.Count, queueDescription.Path));
@@ -1839,7 +1868,12 @@ namespace ServiceBusExplorer.Controls
                         if (messageInspector != null)
                         {
                             message = messageInspector.AfterReceiveMessage(message);
+                            if (message == null)
+                            {
+                                continue;
+                            }
                         }
+
                         brokeredMessages.Add(message);
                     }
                     writeToLog(string.Format(MessagesPeekedFromTheDeadletterQueue, brokeredMessages.Count, queueDescription.Path));
